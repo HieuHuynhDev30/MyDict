@@ -66,7 +66,9 @@ class WordForm(forms.Form):
                             if not meaning[0].isalpha():
                                 meaning = meaning[1:]
                             result['meanings'].append(meaning.capitalize())
+                        result['message'] = f'Showing results for "{exact_word}"'
                     else:
+                        result['message'] = f'Do you mean one of these phrases:'
                         result['phrases'] = response
                 else:
                     result['message'] = f'No results for "{searched_word}"'

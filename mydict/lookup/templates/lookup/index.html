@@ -1,6 +1,7 @@
 {% extends 'base/base.html' %}
 
 {% block content %}
+<div class="d-flex align-items-center">
   <form id="word-form" class="d-flex gap-3" method="post">
     {% csrf_token %}
     <fieldset>
@@ -9,10 +10,11 @@
     </fieldset>
     <input type="submit" value="Look up" />
   </form>
-  <div id="result-of-search" class="">
+</div>
+  <div id="result-of-search" class="my-2">
     <strong id="message"></strong>
     <div id="results">
-      <div class="d-flex justify-content-start align-items-baseline gap-1">
+      <div id="spelling" class="d-flex justify-content-start align-items-baseline gap-1">
         <h2 id="exact_word" class="text-primary"></h2>
         <h5 id='type' class="text-info fst-italic"></h5>
         <h5 id="ipa"></h5>
@@ -23,7 +25,12 @@
         <h5 class='text-success'></h5>
         <ul class="text-secondary"></ul>
       </div>
+      <div id="phrases">
+        <h5 class='text-success'></h5>
+        <ul class="text-secondary"></ul>
+      </div>
     </div>
+    
   </div>
 {% endblock %}
 
@@ -31,54 +38,82 @@
   <script>
     $(document).ready(function () {
       $('#word-form').submit(function (e) {
-        e.preventDefault()
-        $('#result-of-search').append('<span class="loader"></span>')
+        e.preventDefault();
+        $('#word-form').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $.ajax({
           type: 'POST',
           url: "{% url 'lookup:lookup' %}",
           data: $(this).serialize(),
           success: function (response) {
+            $('.loading').remove();
+
             console.log(response)
             //$('#loader').remove();
             $('#word-form').trigger('reset')
             $('#message').empty()
-            var result = response['result']
+            var result = response['result'];
             if (result['success']) {
-              if (result['message']) {
-                $('#message').text(result['message'])
-              } else if (!('exact_word' in result)) {
-              $('#message').text('Do you mean one of these phrases')
+              if ('exact_word' in result) {
+                $('#results *').show();
               } else {
-                $('#message').html(`Showing results for "${result['exact_word']}"`);
-                $('#exact_word').text(result['exact_word']);
-                $('#type').text(result['type']);
-                $('#ipa').text(result['ipa']);
-                $('#definition h5').text('Definitions:');
-                var meaningList = [];
-                result['meanings'].forEach(function(meaning) {
-                  meaningList.push(`<li>${meaning}</li>`)
-                });
-                var meaningListStr = meaningList.join('')
-                $('#definition ul').html(meaningList);
-                if (result['has_audio']) {
-                  var sourceList = '';
-                  result['audio_srcs'].forEach(function (source) {
-                    sourceList += `<source src="${source['src']}" type="audio/${source['type']}" />`
-                  });
-                  console.log(sourceList)
-                  var audio_set = `<audio controls autoplay>${sourceList}</audio>`;
-                  console.log(audio_set)
-                  $('#audio').html(audio_set);
-                  $('#hr').html('<hr>');
+                if ($('#phrases').css('display') == 'none') {
+                  $('#phrases').css('display', 'block');
+                  $('#phrases ul').css('display', 'block');
                 }
+                $('#results div :not(#phrases ul)').hide();
               }
+              for (let item in result) {
+                if (item == 'message') {
+                  $('#message').text(result[item]);
+                };
+                if (item == 'exact_word') {
+                  $('#exact_word').text(result[item])
+                };
+                if (item == 'type') {
+                  $('#type').text(result[item])
+                }
+                if (item == 'ipa') {
+                  $('#ipa').text(result[item])
+                };
+                if (item == 'meanings' ) {
+                  $('#definition h5').text('Definitions:');
+                    var meaningList = [];
+                    result[item].forEach(function(meaning) {
+                      meaningList.push(`<li>${meaning}</li>`)
+                    });
+                    var meaningListStr = meaningList.join('')
+                    $('#definition ul').html(meaningList);
+                };
+                if (item == 'phrases') {
+                  if ('exact_word' in result) {
+                    $('#hr').html('<hr>');
+                    $('#phrases h5').text('Frequently used in phrases:');
+                  }
+                    var phrasesList = [];
+                    result[item].forEach(function(phrase) {
+                      phrasesList.push(`<li>${phrase}</li>`)
+                    });
+                    var phrasesListStr = phrasesList.join('');
+                    $('#phrases ul').html(phrasesList);
+                };
+                if (item == 'audio_srcs') {
+                  var sourceList = '';
+                  result[item].forEach(function (source) {
+                      sourceList += `<source src="${source['src']}" type="audio/${source['type']}" />`
+                    });
+                    var audio_set = `<audio controls autoplay>${sourceList}</audio>`;
+                    $('#audio').html(audio_set);
+                  }}
+                 }
+                },
+            error: function(xhr) {
+            if (xhr.status == 500) {
+              $('.loading').remove();
+              $('#message').text('Server not working correctly');
+              $('#results *').hide();
             }
-          },
-          error: function() {
-            alert('Error occurs')
-          }
+        },
         })
-      })
-    })
+      })})
   </script>
 {% endblock %}
