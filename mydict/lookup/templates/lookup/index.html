@@ -1,0 +1,38 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  <form id="word-form" class="d-flex gap-3" method="post">
+    {% csrf_token %}
+    <fieldset>
+      <label for="look_up">Your word:</label>
+      <input type="text" name="word" id="look_up" placeholder="Type here" />
+    </fieldset>
+    <input type="submit" value="Look up" />
+  </form>
+  <div id="result-of-search" class="">
+    <strong id="message"></strong>
+  </div>
+{% endblock %}
+
+{% block script %}
+  <script>
+    $(document).ready(function () {
+      $('#word-form').submit(function (e) {
+        e.preventDefault()
+        $.ajax({
+          type: 'POST',
+          url: "{% url 'lookup:lookup' %}",
+          data: $(this).serialize(),
+          success: function (response) {
+            console.log(response)
+            $('#word-form').trigger('reset')
+            if (response['result']['success']) {
+              var result = response['result']
+              $('#message').append(`Showing result for '${result['exact_word']}'`)
+            }
+          }
+        })
+      })
+    })
+  </script>
+{% endblock %}
