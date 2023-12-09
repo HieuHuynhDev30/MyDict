@@ -11,6 +11,19 @@
   </form>
   <div id="result-of-search" class="">
     <strong id="message"></strong>
+    <div id="results">
+      <div class="d-flex justify-content-start align-items-baseline gap-1">
+        <h2 id="exact_word" class="text-primary"></h2>
+        <h5 id='type' class="text-info fst-italic"></h5>
+        <h5 id="ipa"></h5>
+        <div id="audio"></div>
+      </div>
+      <div id="hr"></div>
+      <div id="definition">
+        <h5 class='text-success'></h5>
+        <ul class="text-secondary"></ul>
+      </div>
+    </div>
   </div>
 {% endblock %}
 
@@ -19,17 +32,50 @@
     $(document).ready(function () {
       $('#word-form').submit(function (e) {
         e.preventDefault()
+        $('#result-of-search').append('<span class="loader"></span>')
         $.ajax({
           type: 'POST',
           url: "{% url 'lookup:lookup' %}",
           data: $(this).serialize(),
           success: function (response) {
             console.log(response)
+            //$('#loader').remove();
             $('#word-form').trigger('reset')
-            if (response['result']['success']) {
-              var result = response['result']
-              $('#message').append(`Showing result for '${result['exact_word']}'`)
+            $('#message').empty()
+            var result = response['result']
+            if (result['success']) {
+              if (result['message']) {
+                $('#message').text(result['message'])
+              } else if (!('exact_word' in result)) {
+              $('#message').text('Do you mean one of these phrases')
+              } else {
+                $('#message').html(`Showing results for "${result['exact_word']}"`);
+                $('#exact_word').text(result['exact_word']);
+                $('#type').text(result['type']);
+                $('#ipa').text(result['ipa']);
+                $('#definition h5').text('Definitions:');
+                var meaningList = [];
+                result['meanings'].forEach(function(meaning) {
+                  meaningList.push(`<li>${meaning}</li>`)
+                });
+                var meaningListStr = meaningList.join('')
+                $('#definition ul').html(meaningList);
+                if (result['has_audio']) {
+                  var sourceList = '';
+                  result['audio_srcs'].forEach(function (source) {
+                    sourceList += `<source src="${source['src']}" type="audio/${source['type']}" />`
+                  });
+                  console.log(sourceList)
+                  var audio_set = `<audio controls autoplay>${sourceList}</audio>`;
+                  console.log(audio_set)
+                  $('#audio').html(audio_set);
+                  $('#hr').html('<hr>');
+                }
+              }
             }
+          },
+          error: function() {
+            alert('Error occurs')
           }
         })
       })

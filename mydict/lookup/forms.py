@@ -70,10 +70,8 @@ class WordForm(forms.Form):
                         result['phrases'] = response
                 else:
                     result['message'] = f'No results for "{searched_word}"'
-            elif response.status_code == 500:
-                result['message'] = 'Word not found'
             else:
-                result['message'] = 'API not working'
+                result['message'] = 'Server not working'
         else:
             result['message'] = 'Invalid typing'
         return result
