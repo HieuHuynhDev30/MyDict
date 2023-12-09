@@ -1,5 +1,11 @@
 from django.contrib import admin
-from . models import Word
+
+from .models import Word
+
 
 # Register your models here.
-admin.site.register(Word)
+class WordAdmin(admin.ModelAdmin):
+    fields = ['word', 'lookup_date']
+
+
+admin.site.register(Word, WordAdmin)
