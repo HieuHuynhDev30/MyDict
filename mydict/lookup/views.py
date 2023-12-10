@@ -17,7 +17,7 @@ def lookup(request):
             added_instances_list = list(added_instances)
             search_result = form.search()
             search_result['success'] = True
-            if not added_instances_list and 'exact_word' not in search_result:
+            if not added_instances_list and 'exact_word' in search_result:
                 instance_word = Word(word=word)
                 instance_word.save()
             return JsonResponse({'result': search_result})
