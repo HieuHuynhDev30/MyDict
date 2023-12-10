@@ -29,23 +29,38 @@ class WordForm(forms.Form):
                 if response:
                     response_str = str(response)
                     if 'meta' in response_str:
-                        response_object = response[0]
-                        meta = response_object['meta']
-                        stems = meta['stems']
+                        response_object = response
+                        # meta = response_object['meta']
+                        # stems = meta['stems']
+                        # exact_word = stems[0]
+                        # result['exact_word'] = exact_word.capitalize()
+                        stems = next(find_key(response_object, 'stems'))
                         exact_word = stems[0]
-                        result['exact_word'] = exact_word.capitalize()
-                        types = find_key(response_object, 'fl')
-                        word_type = ''
-                        for i in types:
-                            word_type = i
-                            break
-                        result['type'] = word_type
-                        ipa = response_object['hwi']['prs'][0]['ipa']
-                        result['ipa'] = f'/{ipa}/'
-                        audio = response_object['hwi']['prs'][0]['sound']['audio']
+                        result['exact_word'] = exact_word
+                        # types = find_key(response_object, 'fl')
+                        # word_type = next(types)
+                        # for i in types:
+                        #     word_type = i
+                        #     break
+                        result['type'] = next(find_key(response_object, 'fl'))
+                        # ipa = response_object['hwi']['prs'][0]['ipa']
+                        ipas = find_key(response_object, 'ipa')
+                        ipa = next(ipas)
+                        # for i in ipas:
+                        #     ipa = ipas[i]
+                        #     break
+
+                        result['ipa'] = f"/{next(find_key(response_object, 'ipa'))}/"
+                        # audio = response_object['hwi']['prs'][0]['sound']['audio']
+                        audio = next(find_key(response_object, 'audio'))
+                        # for i in audios:
+                        #     audio = audios[i]
+                        #     if audio:
+                        #         subdirectory = audio[0]
+                        #         break
                         if audio:
+                            subdirectory = audio[0]
                             result['has_audio'] = True
-                        subdirectory = audio[0]
                         prefixes = ['bix', 'gg', *tuple(list('0123456789'))]
                         for prefix in prefixes:
                             if audio.startswith(prefix, 0):
@@ -62,10 +77,14 @@ class WordForm(forms.Form):
                         for phrase in stems[1:]:
                             result['phrases'].append(phrase.capitalize())
                         result['meanings'] = []
-                        for meaning in response_object['shortdef']:
-                            if not meaning[0].isalpha():
-                                meaning = meaning[1:]
-                            result['meanings'].append(meaning.capitalize())
+                        meanings = next(find_key(response_object, 'def'))
+                        if isinstance(meanings, list):
+                            for i, meaning in enumerate(meanings):
+                                if isinstance(meaning, str):
+                                    meanings[i] = meaning.capitalize()
+                                else:
+                                    meanings[i] = 'undefined'
+                                result['meanings'].append(meanings[i])
                         result['message'] = f'Showing results for "{exact_word}"'
                     else:
                         result['message'] = f'Do you mean one of these phrases:'
