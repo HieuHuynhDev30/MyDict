@@ -1,37 +1,46 @@
 {% extends 'base/base.html' %}
 
 {% block content %}
-<div class="d-flex align-items-center">
-  <form id="word-form" class="d-flex gap-3" method="post">
-    {% csrf_token %}
-    <fieldset>
-      <label for="look_up">Your word:</label>
-      <input type="text" name="word" id="look_up" placeholder="Type here" />
-    </fieldset>
-    <input type="submit" value="Look up" />
-  </form>
-</div>
-  <div id="result-of-search" class="my-2">
-    <strong id="message"></strong>
-    <div id="results">
-      <div id="spelling" class="d-flex justify-content-start align-items-baseline gap-1">
-        <h2 id="exact_word" class="text-primary"></h2>
-        <h5 id='type' class="text-info fst-italic"></h5>
-        <h5 id="ipa"></h5>
-        <div id="audio"></div>
-      </div>
-      <div id="hr"></div>
-      <div id="definition">
-        <h5 class='text-success'></h5>
-        <ul class="text-secondary"></ul>
-      </div>
-      <div id="phrases">
-        <h5 class='text-success'></h5>
-        <ul class="text-secondary"></ul>
-      </div>
+<div class="row row-cols-2">
+  <div class="col-10">
+    <div class="d-flex align-items-center">
+      <form id="word-form" class="d-flex gap-3" method="post">
+        {% csrf_token %}
+        <fieldset>
+          <label for="look_up">Your word:</label>
+          <input type="text" name="word" id="look_up" placeholder="Type here" />
+        </fieldset>
+        <input type="submit" value="Look up" />
+      </form>
     </div>
-    
+      <div id="result-of-search" class="my-2">
+        <strong id="message"></strong>
+        <div id="results">
+          <div id="spelling" class="d-flex justify-content-start align-items-baseline gap-1">
+            <h2 id="exact_word" class="text-primary"></h2>
+            <h5 id='type' class="text-info fst-italic"></h5>
+            <h5 id="ipa"></h5>
+            <div id="audio"></div>
+          </div>
+          <div id="hr"></div>
+          <div id="definition">
+            <h5 class='text-success'></h5>
+            <ul class="text-secondary"></ul>
+          </div>
+          <div id="phrases">
+            <h5 class='text-success'></h5>
+            <ul class="text-secondary"></ul>
+          </div>
+        </div>
+        
+      </div>
   </div>
+  <div id="history" class="col-2">
+    <h1>History:</h1>
+    <ul>
+    </ul>
+  </div>
+</div>
 {% endblock %}
 
 {% block script %}
@@ -46,12 +55,15 @@
           data: $(this).serialize(),
           success: function (response) {
             $('.loading').remove();
-
+``
             console.log(response)
             //$('#loader').remove();
-            $('#word-form').trigger('reset')
-            $('#message').empty()
+            $('#word-form').trigger('reset');
+            $('#message').empty();
+            $('#history ul').empty();
             var result = response['result'];
+            var history = response['history'];
+            console.log(history)
             if (result['success']) {
               if ('exact_word' in result) {
                 $('#results *').show();
@@ -104,7 +116,10 @@
                     var audio_set = `<audio controls autoplay>${sourceList}</audio>`;
                     $('#audio').html(audio_set);
                   }}
-                 }
+                 };
+                 $.each(history, function(index,word) {
+                  $('#history ul').append(`<li>${history[index].fields.word}</li>`)
+                 })
                 },
             error: function(xhr) {
             if (xhr.status == 500) {
@@ -114,6 +129,6 @@
             }
         },
         })
-      })})
+      })});
   </script>
 {% endblock %}
