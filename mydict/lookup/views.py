@@ -12,6 +12,9 @@ from .models import Word
 # Create your views here.
 @csrf_exempt
 def lookup(request):
+    latest_word_list = Word.objects.order_by('-lookup_date')[:10]
+    latest_word_json = serializers.serialize('json', latest_word_list)
+    latest_word_object = json.loads(latest_word_json)
     if request.method == "POST":
         form = WordForm(request.POST)
         search_result = {}
@@ -24,9 +27,6 @@ def lookup(request):
             if not added_instances_list and 'exact_word' in search_result:
                 instance_word = Word(word=word)
                 instance_word.save()
-        latest_word_list = Word.objects.order_by('-lookup_date')[:10]
-        latest_word_json = serializers.serialize('json', latest_word_list)
-        latest_word_object = json.loads(latest_word_json)
         return JsonResponse({'result': search_result, 'history': latest_word_object, })
     else:
-        return render(request, 'lookup/index.html')
+        return render(request, 'lookup/index.html', {'history': latest_word_list})

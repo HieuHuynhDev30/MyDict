@@ -20,7 +20,7 @@
             <h2 id="exact_word" class="text-primary"></h2>
             <h5 id='type' class="text-info fst-italic"></h5>
             <h5 id="ipa"></h5>
-            <div id="audio"></div>
+            <audio id='audio'></audio>
           </div>
           <div id="hr"></div>
           <div id="definition">
@@ -38,16 +38,24 @@
   <div id="history" class="col-2">
     <h1>History:</h1>
     <ul>
+      {% for word in history %}
+        <li>{{ word.word }}</li>
+      {% endfor %}
     </ul>
   </div>
+</div>
+<div>
+  <button id='play'>Play</button>
 </div>
 {% endblock %}
 
 {% block script %}
   <script>
     $(document).ready(function () {
+      
       $('#word-form').submit(function (e) {
         e.preventDefault();
+        $('#history ul').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $('#word-form').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $.ajax({
           type: 'POST',
@@ -55,12 +63,10 @@
           data: $(this).serialize(),
           success: function (response) {
             $('.loading').remove();
-``
             console.log(response)
             //$('#loader').remove();
             $('#word-form').trigger('reset');
             $('#message').empty();
-            $('#history ul').empty();
             var result = response['result'];
             var history = response['history'];
             console.log(history)
@@ -113,8 +119,12 @@
                   result[item].forEach(function (source) {
                       sourceList += `<source src="${source['src']}" type="audio/${source['type']}" />`
                     });
-                    var audio_set = `<audio controls autoplay>${sourceList}</audio>`;
-                    $('#audio').html(audio_set);
+                    //var audio_set = `<audio id='player'>${sourceList}</audio>`
+                    $('audio').empty()
+                    $('#audio').html(sourceList);
+                    $('#play').click(function(){
+                      document.getElementById('audio').play()
+                    })
                   }}
                  };
                  $.each(history, function(index,word) {
@@ -127,8 +137,10 @@
               $('#message').text('Server not working correctly');
               $('#results *').hide();
             }
-        },
+        }
         })
-      })});
+      })
+      
+      })
   </script>
 {% endblock %}
