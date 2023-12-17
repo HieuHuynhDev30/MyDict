@@ -21,6 +21,8 @@
             <h5 id='type' class="text-info fst-italic"></h5>
             <h5 id="ipa"></h5>
             <audio id='audio'></audio>
+            <div id='play'>
+            </div>
           </div>
           <div id="hr"></div>
           <div id="definition">
@@ -44,15 +46,12 @@
     </ul>
   </div>
 </div>
-<div>
-  <button id='play'>Play</button>
-</div>
+
 {% endblock %}
 
 {% block script %}
-  <script>
+  <script> 
     $(document).ready(function () {
-      
       $('#word-form').submit(function (e) {
         e.preventDefault();
         $('#history ul').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
@@ -115,18 +114,14 @@
                     $('#phrases ul').html(phrasesList);
                 };
                 if (item == 'audio_srcs') {
-                  var sourceList = '';
-                  result[item].forEach(function (source) {
-                      sourceList += `<source src="${source['src']}" type="audio/${source['type']}" />`
-                    });
-                    //var audio_set = `<audio id='player'>${sourceList}</audio>`
-                    $('audio').empty()
-                    $('#audio').html(sourceList);
-                    $('#play').click(function(){
-                      document.getElementById('audio').play()
+                  var url = result[item]
+                  var audio = new Audio(url[0]['src'])
+                    $('#play').html('<button>Play</button>') 
+                    $('#play button').click(function(){
+                        audio.play()                  
                     })
                   }}
-                 };
+                };
                  $.each(history, function(index,word) {
                   $('#history ul').append(`<li>${history[index].fields.word}</li>`)
                  })
