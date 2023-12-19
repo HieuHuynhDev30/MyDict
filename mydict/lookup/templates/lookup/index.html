@@ -4,14 +4,17 @@
 <div class="row row-cols-2">
   <div class="col-10">
     <div class="d-flex align-items-center">
-      <form id="word-form" class="d-flex gap-3" method="post">
-        {% csrf_token %}
-        <fieldset>
-          <label for="look_up">Your word:</label>
-          <input type="text" name="word" id="look_up" placeholder="Type here" />
-        </fieldset>
-        <input type="submit" value="Look up" />
-      </form>
+      <div id="search-box">
+        <form id="word-form" class="d-flex gap-3" method="post">
+          {% csrf_token %}
+          <fieldset>
+            <label for="look_up">Your word:</label>
+            <input type="text" name="word" id="look_up" placeholder="Type here" />
+          </fieldset>
+          <input type="submit" value="Look up" />
+        </form>
+        <ul id="suggest"></ul>
+      </div>
     </div>
       <div id="result-of-search" class="my-2">
         <strong id="message"></strong>
@@ -52,16 +55,39 @@
 {% block script %}
   <script> 
     $(document).ready(function () {
+      $('#look_up').keyup(function(){
+        //$('#suggest').html( $(this).val())
+        var typing = $(this).val();
+        if (typing == '') {
+          $('#suggest').empty()
+        } else {
+          $.ajax({
+            type: 'POST',
+            url: "{% url 'lookup:lookup' %}",
+            data: { "word": $(this).val() },
+            success: function(response) {
+              var result = response['result'];
+              var phrasesList = [];
+              result['phrases'].forEach(function(phrase) {
+                phrasesList.push(`<li>${phrase}</li>`)
+              });
+              var phrasesListStr = phrasesList.join('');
+              $('#suggest').html(phrasesList);
+            }
+          })
+        }
+      })
       $('#word-form').submit(function (e) {
         e.preventDefault();
         $('#history ul').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
-        $('#word-form').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
+        $('#search-box').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $.ajax({
           type: 'POST',
           url: "{% url 'lookup:lookup' %}",
           data: $(this).serialize(),
           success: function (response) {
             $('.loading').remove();
+            $('#suggest').empty();
             console.log(response)
             //$('#loader').remove();
             $('#word-form').trigger('reset');
