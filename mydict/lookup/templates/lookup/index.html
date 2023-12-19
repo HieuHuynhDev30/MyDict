@@ -4,16 +4,16 @@
 <div class="row row-cols-2">
   <div class="col-10">
     <div class="d-flex align-items-center">
-      <div id="search-box">
+      <div id="search-box" class="position-relative">
         <form id="word-form" class="d-flex gap-3" method="post">
           {% csrf_token %}
-          <fieldset>
-            <label for="look_up">Your word:</label>
-            <input type="text" name="word" id="look_up" placeholder="Type here" />
-          </fieldset>
-          <input type="submit" value="Look up" />
+          <label for="look_up">Your word:</label>
+            <div>
+              <input type="text" name="word" id="look_up" placeholder="Type here" />
+              <ul id="suggest" class="position-absolute border border-1 z-3 list-unstyled py-2 opacity-100 text-bg-light rounded-2"></ul>
+            </div>
+          <input id="lookup-button" type="submit" value="Look up" />
         </form>
-        <ul id="suggest"></ul>
       </div>
     </div>
       <div id="result-of-search" class="my-2">
@@ -42,7 +42,7 @@
   </div>
   <div id="history" class="col-2">
     <h1>History:</h1>
-    <ul>
+    <ul class="list-unstyled">
       {% for word in history %}
         <li>{{ word.word }}</li>
       {% endfor %}
@@ -55,12 +55,19 @@
 {% block script %}
   <script> 
     $(document).ready(function () {
+      if ($('#look_up').val() == '') {
+        $('#suggest').hide()
+      }
       $('#look_up').keyup(function(){
-        //$('#suggest').html( $(this).val())
+        $('#suggest').show()
         var typing = $(this).val();
+        $('#lookup-button').click(function(){
+          
+        })
         if (typing == '') {
           $('#suggest').empty()
         } else {
+          $('#suggest').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>')
           $.ajax({
             type: 'POST',
             url: "{% url 'lookup:lookup' %}",
@@ -68,6 +75,9 @@
             success: function(response) {
               var result = response['result'];
               var phrasesList = [];
+              if ('exact_word' in result) {
+                phrasesList.push(`<li>${result['exact_word']}</li>`)
+              }
               result['phrases'].forEach(function(phrase) {
                 phrasesList.push(`<li>${phrase}</li>`)
               });
@@ -77,15 +87,16 @@
           })
         }
       })
-      $('#word-form').submit(function (e) {
-        e.preventDefault();
+      
+      function lookUp() {
         $('#history ul').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $('#search-box').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $.ajax({
           type: 'POST',
           url: "{% url 'lookup:lookup' %}",
-          data: $(this).serialize(),
+          data: $('#word-form').serialize(),
           success: function (response) {
+            $('#suggest').hide();
             $('.loading').remove();
             $('#suggest').empty();
             console.log(response)
@@ -160,8 +171,16 @@
             }
         }
         })
+      }
+      $('#word-form').submit(function(e) {
+        e.preventDefault();
+        lookUp();
       })
-      
+      $('#suggest, #history ul').click(function(event){
+        var select = event.target.innerText
+        $('#look_up').val(select)
+        $('#lookup-button').click()
+      })
       })
   </script>
 {% endblock %}
