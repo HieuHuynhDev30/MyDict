@@ -62,6 +62,47 @@
          transform: scaleY(1);
         }
        }
+       .comic-button {
+        display: inline-block;
+        padding: 5px 3px;
+        font-size: 20px;
+        font-weight: bold;
+        text-align: center;
+        text-decoration: none;
+        color: #fff;
+        background-color: #ff5252;
+        border: 2px solid #000;
+        border-radius: 10px;
+        box-shadow: 5px 5px 0px #000;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+      
+      .comic-button:hover {
+        background-color: #fff;
+        color: #ff5252;
+        border: 2px solid #ff5252;
+        box-shadow: 5px 5px 0px #ff5252;
+      }
+      
+      .comic-button:active {
+        background-color: #fcf414;
+        box-shadow: none;
+        transform: translateY(4px);
+      }
+
+      #suggest li, 
+      #history li {
+        cursor: pointer;
+        padding: 0 10px;
+      }
+      #suggest li:hover {
+        background-color: #fff;
+        color: #4c86f9;
+      }
+      #history li:hover {
+        color: #4c86f9;
+      }
     </style>
   </head>
   <body>

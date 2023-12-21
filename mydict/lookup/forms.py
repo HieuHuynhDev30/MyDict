@@ -30,34 +30,15 @@ class WordForm(forms.Form):
                     response_str = str(response)
                     if 'meta' in response_str:
                         response_object = response
-                        # meta = response_object['meta']
-                        # stems = meta['stems']
-                        # exact_word = stems[0]
-                        # result['exact_word'] = exact_word.capitalize()
+
                         stems = next(find_key(response_object, 'stems'))
                         exact_word = stems[0]
                         result['exact_word'] = exact_word
-                        # types = find_key(response_object, 'fl')
-                        # word_type = next(types)
-                        # for i in types:
-                        #     word_type = i
-                        #     break
-                        result['type'] = next(find_key(response_object, 'fl'))
-                        # ipa = response_object['hwi']['prs'][0]['ipa']
-                        ipas = find_key(response_object, 'ipa')
-                        ipa = next(ipas)
-                        # for i in ipas:
-                        #     ipa = ipas[i]
-                        #     break
 
+                        result['type'] = next(find_key(response_object, 'fl'))
                         result['ipa'] = f"/{next(find_key(response_object, 'ipa'))}/"
-                        # audio = response_object['hwi']['prs'][0]['sound']['audio']
                         audio = next(find_key(response_object, 'audio'))
-                        # for i in audios:
-                        #     audio = audios[i]
-                        #     if audio:
-                        #         subdirectory = audio[0]
-                        #         break
+
                         if audio:
                             subdirectory = audio[0]
                             result['has_audio'] = True

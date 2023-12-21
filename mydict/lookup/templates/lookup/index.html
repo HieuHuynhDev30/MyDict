@@ -4,14 +4,17 @@
 <div class="row row-cols-2">
   <div class="col-10">
     <div class="d-flex align-items-center">
-      <form id="word-form" class="d-flex gap-3" method="post">
-        {% csrf_token %}
-        <fieldset>
+      <div id="search-box" class="position-relative">
+        <form id="word-form" class="d-flex gap-3" method="post">
+          {% csrf_token %}
           <label for="look_up">Your word:</label>
-          <input type="text" name="word" id="look_up" placeholder="Type here" />
-        </fieldset>
-        <input type="submit" value="Look up" />
-      </form>
+            <div>
+              <input type="text" name="word" id="look_up" placeholder="Type here" />
+              <ul id="suggest" class="position-absolute border border-1 z-3 list-unstyled py-2 opacity-100 text-bg-light rounded-2"></ul>
+            </div>
+          <input id="lookup-button" type="submit" value="Look up" />
+        </form>
+      </div>
     </div>
       <div id="result-of-search" class="my-2">
         <strong id="message"></strong>
@@ -20,7 +23,9 @@
             <h2 id="exact_word" class="text-primary"></h2>
             <h5 id='type' class="text-info fst-italic"></h5>
             <h5 id="ipa"></h5>
-            <div id="audio"></div>
+            <audio id='audio'></audio>
+            <div id='play'>
+            </div>
           </div>
           <div id="hr"></div>
           <div id="definition">
@@ -37,30 +42,67 @@
   </div>
   <div id="history" class="col-2">
     <h1>History:</h1>
-    <ul>
+    <ul class="list-unstyled">
+      {% for word in history %}
+        <li>{{ word.word }}</li>
+      {% endfor %}
     </ul>
   </div>
 </div>
+
 {% endblock %}
 
 {% block script %}
-  <script>
+  <script> 
     $(document).ready(function () {
-      $('#word-form').submit(function (e) {
-        e.preventDefault();
-        $('#word-form').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
+      if ($('#look_up').val() == '') {
+        $('#suggest').hide()
+      }
+      $('#look_up').keyup(function(){
+        $('#suggest').show()
+        var typing = $(this).val();
+        $('#lookup-button').click(function(){
+          
+        })
+        if (typing == '') {
+          $('#suggest').empty()
+        } else {
+          $('#suggest').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>')
+          $.ajax({
+            type: 'POST',
+            url: "{% url 'lookup:lookup' %}",
+            data: { "word": $(this).val() },
+            success: function(response) {
+              var result = response['result'];
+              var phrasesList = [];
+              if ('exact_word' in result) {
+                phrasesList.push(`<li>${result['exact_word']}</li>`)
+              }
+              result['phrases'].forEach(function(phrase) {
+                phrasesList.push(`<li>${phrase}</li>`)
+              });
+              var phrasesListStr = phrasesList.join('');
+              $('#suggest').html(phrasesList);
+            }
+          })
+        }
+      })
+      
+      function lookUp() {
+        $('#history ul').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
+        $('#search-box').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $.ajax({
           type: 'POST',
           url: "{% url 'lookup:lookup' %}",
-          data: $(this).serialize(),
+          data: $('#word-form').serialize(),
           success: function (response) {
+            $('#suggest').hide();
             $('.loading').remove();
-``
+            $('#suggest').empty();
             console.log(response)
             //$('#loader').remove();
             $('#word-form').trigger('reset');
             $('#message').empty();
-            $('#history ul').empty();
             var result = response['result'];
             var history = response['history'];
             console.log(history)
@@ -109,14 +151,14 @@
                     $('#phrases ul').html(phrasesList);
                 };
                 if (item == 'audio_srcs') {
-                  var sourceList = '';
-                  result[item].forEach(function (source) {
-                      sourceList += `<source src="${source['src']}" type="audio/${source['type']}" />`
-                    });
-                    var audio_set = `<audio controls autoplay>${sourceList}</audio>`;
-                    $('#audio').html(audio_set);
+                  var url = result[item]
+                  var audio = new Audio(url[0]['src'])
+                    $('#play').html('<button class="comic-button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-music-note" viewBox="0 0 16 16"><path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2"/><path fill-rule="evenodd" d="M9 3v10H8V3z"/><path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z"/></svg></button>') 
+                    $('#play button').click(function(){
+                        audio.play()                  
+                    })
                   }}
-                 };
+                };
                  $.each(history, function(index,word) {
                   $('#history ul').append(`<li>${history[index].fields.word}</li>`)
                  })
@@ -127,8 +169,18 @@
               $('#message').text('Server not working correctly');
               $('#results *').hide();
             }
-        },
+        }
         })
-      })});
+      }
+      $('#word-form').submit(function(e) {
+        e.preventDefault();
+        lookUp();
+      })
+      $('#suggest, #history ul').click(function(event){
+        var select = event.target.innerText
+        $('#look_up').val(select)
+        $('#lookup-button').click()
+      })
+      })
   </script>
 {% endblock %}
