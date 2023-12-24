@@ -14,6 +14,32 @@ def find_key(json_input, key):
             yield from find_key(item, key)
 
 
+def get_meanings(json, key):
+    meanings = []
+    if isinstance(json, dict):
+        meanings_list = next(find_key(json, key))
+    else:
+        meanings_list = [json]
+    if isinstance(meanings_list, list):
+        for i, meaning in enumerate(meanings_list):
+            if isinstance(meaning, str):
+                meaning = meaning.replace('{bc}', '')
+                meaning = meaning.replace('{b}', '<strong>')
+                meaning = meaning.replace('{/b}', '</strong>')
+                meaning = meaning.replace('{inf}', '<sub>')
+                meaning = meaning.replace('{/inf}', '</sub>')
+                meaning = meaning.replace('{it}', '<i>')
+                meaning = meaning.replace('{/it}', '</i>')
+                meaning = meaning.strip()
+                meanings_list[i] = meaning.capitalize()
+            else:
+                meanings_list[i] = 'undefined'
+            meanings.append(meanings_list[i])
+    else:
+        meanings.append(meanings_list)
+    return meanings
+
+
 class WordForm(forms.Form):
     word = forms.CharField(label='Your word', max_length=50)
 
@@ -60,16 +86,8 @@ class WordForm(forms.Form):
                                             'src': f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}''',
                                             'type': ext})
                                     result['audio_srcs'] = audio_srcs
-                                result['meanings'] = []
-                                meanings = next(find_key(response, 'def'))
-                                if isinstance(meanings, list):
-                                    for i, meaning in enumerate(meanings):
-                                        if isinstance(meaning, str):
-                                            meanings[i] = meaning.capitalize()
-                                        else:
-                                            meanings[i] = 'undefined'
-                                        result['meanings'].append(meanings[i])
-                                result['message'] = f'Showing results for "{phrase}"'
+                                result['meanings'] = get_meanings(response, 'def')
+                                result['message'] = f'Showing results for "{searched_word}"'
                                 break
                             else:
                                 dros_object = next(find_key(response, 'dros'))
@@ -81,11 +99,12 @@ class WordForm(forms.Form):
                                             phrase_object = dro
                                             result['exact_word'] = dro['drp']
                                             break
-                                    result['gram'] = next(find_key(phrase_object, 'gram'), 'collocation')
-                                    result['meanings'] = next(find_key(phrase_object, 'dt'))[0][1]
-                                    result['meanings'] = [result['meanings']]
-                                    result['usage'] = next(find_key(phrase_object, 'pva'), result['meanings'])
-
+                                    result['gram'] = next(find_key(phrase_object, 'gram'),
+                                                          'collocation')
+                                    # result['meanings'] = next(find_key(phrase_object, 'dt'))[0][1]
+                                    result['meanings'] = get_meanings(next(find_key(phrase_object, 'dt'))[0][1], '')
+                                    result['usage'] = next(find_key(phrase_object, 'pva'),
+                                                           result['meanings'])
                                     break
                                 else:
                                     continue
@@ -99,4 +118,3 @@ class WordForm(forms.Form):
             else:
                 result['message'] = 'Invalid typing'
         return result
-
