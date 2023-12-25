@@ -14,66 +14,108 @@ def find_key(json_input, key):
             yield from find_key(item, key)
 
 
+def get_meanings(json, key):
+    meanings = []
+    if isinstance(json, str):
+        meanings_list = [json]
+    else:
+        meanings_list = next(find_key(json, key))
+    if isinstance(meanings_list, list):
+        for i, meaning in enumerate(meanings_list):
+            if isinstance(meaning, str):
+                meaning = meaning.replace('{b}', '<strong>')
+                meaning = meaning.replace('{/b}', '</strong>')
+                meaning = meaning.replace('{inf}', '<sub>')
+                meaning = meaning.replace('{/inf}', '</sub>')
+                meaning = meaning.replace('{it}', '<i>')
+                meaning = meaning.replace('{/it}', '</i>')
+                meaning = meaning.replace('{ldquo}', '"')
+                meaning = meaning.replace('{rdquo}', '"')
+                meaning = meaning.replace('{', '<')
+                meaning = meaning.replace('}', '>')
+                meaning = meaning.strip()
+                meanings_list[i] = meaning.capitalize()
+            else:
+                meanings_list[i] = 'undefined'
+            meanings.append(meanings_list[i])
+    else:
+        meanings.append(meanings_list)
+    return meanings
+
+
 class WordForm(forms.Form):
     word = forms.CharField(label='Your word', max_length=50)
 
     def search(self):
         result = {}
+        api_key = '57f42480-9178-4af8-9398-2f75f536fc08'
         searched_word = self.cleaned_data['word']
-        if searched_word.isalpha():
-            api_key = '57f42480-9178-4af8-9398-2f75f536fc08'
-            api_url = f'''https://www.dictionaryapi.com/api/v3/references/learners/json/{searched_word}?key={api_key}'''
-            response = requests.get(api_url)
-            if response.status_code == 200:
-                response = response.json()
-                if response:
+        searched_word = searched_word.strip()
+        searched_word = searched_word.casefold()
+        word_list = searched_word.split()
+        for each in word_list:
+            if each.isalpha():
+                api_url = f'''https://www.dictionaryapi.com/api/v3/references/learners/json/{each}?key={api_key}'''
+                response = requests.get(api_url)
+                if response.status_code == 200:
+                    response = response.json()
                     response_str = str(response)
-                    if 'meta' in response_str:
-                        response_object = response
-
-                        stems = next(find_key(response_object, 'stems'))
-                        exact_word = stems[0]
-                        result['exact_word'] = exact_word
-
-                        result['type'] = next(find_key(response_object, 'fl'))
-                        result['ipa'] = f"/{next(find_key(response_object, 'ipa'))}/"
-                        audio = next(find_key(response_object, 'audio'))
-
-                        if audio:
-                            subdirectory = audio[0]
-                            result['has_audio'] = True
-                        prefixes = ['bix', 'gg', *tuple(list('0123456789'))]
-                        for prefix in prefixes:
-                            if audio.startswith(prefix, 0):
-                                subdirectory = prefix
-                        formats = ['mp3', 'wav', 'ogg']
-                        audio_srcs = []
-                        for ext in formats:
-                            audio_srcs.append({
-                                'src': f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}''',
-                                'type': ext})
-                        result['audio_srcs'] = audio_srcs
-
-                        result['phrases'] = []
-                        for phrase in stems[1:]:
-                            result['phrases'].append(phrase.capitalize())
-                        result['meanings'] = []
-                        meanings = next(find_key(response_object, 'def'))
-                        if isinstance(meanings, list):
-                            for i, meaning in enumerate(meanings):
-                                if isinstance(meaning, str):
-                                    meanings[i] = meaning.capitalize()
+                    if response:
+                        if 'meta' in response_str:
+                            if " " not in searched_word:
+                                stems = next(find_key(response, 'stems'))
+                                result['phrases'] = []
+                                for phrase in stems:
+                                    result['phrases'].append(phrase.casefold())
+                                if searched_word in result['phrases']:
+                                    for phrase in result['phrases']:
+                                        if phrase == searched_word:
+                                            result['exact_word'] = phrase
+                                result['type'] = next(find_key(response, 'fl'))
+                                result['ipa'] = f"/{next(find_key(response, 'ipa'))}/"
+                                audio = next(find_key(response, 'audio'))
+                                if audio:
+                                    subdirectory = audio[0]
+                                    result['has_audio'] = True
+                                    prefixes = ['bix', 'gg', *tuple(list('0123456789'))]
+                                    for prefix in prefixes:
+                                        if audio.startswith(prefix, 0):
+                                            subdirectory = prefix
+                                    formats = ['mp3', 'wav', 'ogg']
+                                    audio_srcs = []
+                                    for ext in formats:
+                                        audio_srcs.append({
+                                            'src': f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}''',
+                                            'type': ext})
+                                    result['audio_srcs'] = audio_srcs
+                                result['meanings'] = get_meanings(response, 'def')
+                                result['message'] = f'Showing results for "{searched_word}"'
+                                break
+                            else:
+                                dros_object = next(find_key(response, 'dros'))
+                                dros_object_str = str(dros_object)
+                                if searched_word in dros_object_str:
+                                    phrase_object = {}
+                                    for dro in dros_object:
+                                        if dro['drp'] == searched_word:
+                                            phrase_object = dro
+                                            result['exact_word'] = dro['drp']
+                                            break
+                                    result['gram'] = next(find_key(phrase_object, 'gram'),
+                                                          'collocation')
+                                    result['meanings'] = get_meanings(next(find_key(phrase_object, 'dt'))[0][1], '')
+                                    result['usage'] = next(find_key(phrase_object, 'pva'),
+                                                           result['meanings'])
+                                    break
                                 else:
-                                    meanings[i] = 'undefined'
-                                result['meanings'].append(meanings[i])
-                        result['message'] = f'Showing results for "{exact_word}"'
+                                    continue
+                        else:
+                            result['message'] = f'Do you mean one of these phrases:'
+                            result['phrases'] = response
                     else:
-                        result['message'] = f'Do you mean one of these phrases:'
-                        result['phrases'] = response
+                        result['message'] = f'No results for "{searched_word}"'
                 else:
-                    result['message'] = f'No results for "{searched_word}"'
+                    result['message'] = 'Server not working'
             else:
-                result['message'] = 'Server not working'
-        else:
-            result['message'] = 'Invalid typing'
+                result['message'] = 'Invalid typing'
         return result

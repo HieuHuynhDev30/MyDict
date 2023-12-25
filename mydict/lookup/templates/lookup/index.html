@@ -91,6 +91,7 @@
       function lookUp() {
         $('#history ul').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
         $('#search-box').after('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>');
+        console.log($('#look_up').val())
         $.ajax({
           type: 'POST',
           url: "{% url 'lookup:lookup' %}",
@@ -126,6 +127,9 @@
                 if (item == 'type') {
                   $('#type').text(result[item])
                 }
+                if (item == 'gram') {
+                  $('#type').text(result[item])
+                }
                 if (item == 'ipa') {
                   $('#ipa').text(result[item])
                 };
@@ -138,18 +142,7 @@
                     var meaningListStr = meaningList.join('')
                     $('#definition ul').html(meaningList);
                 };
-                if (item == 'phrases') {
-                  if ('exact_word' in result) {
-                    $('#hr').html('<hr>');
-                    $('#phrases h5').text('Frequently used in phrases:');
-                  }
-                    var phrasesList = [];
-                    result[item].forEach(function(phrase) {
-                      phrasesList.push(`<li>${phrase}</li>`)
-                    });
-                    var phrasesListStr = phrasesList.join('');
-                    $('#phrases ul').html(phrasesList);
-                };
+               
                 if (item == 'audio_srcs') {
                   var url = result[item]
                   var audio = new Audio(url[0]['src'])
