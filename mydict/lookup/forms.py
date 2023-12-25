@@ -24,7 +24,7 @@ def get_valid(json, key):
 
 def get_audio(json):
     audio = next(find_key(json, 'audio'))
-    audio_srcs = {}
+    audio_srcs = []
     if audio:
         subdirectory = audio[0]
         prefixes = ['bix', 'gg', *tuple(list('0123456789'))]
@@ -33,12 +33,7 @@ def get_audio(json):
                 subdirectory = prefix
         formats = ['mp3', 'wav', 'ogg']
         for ext in formats:
-            audio_srcs[
-                'src'] = f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}'''
-            audio_srcs['type'] = ext
-            audio_srcs['is_audio'] = True
-    else:
-        audio_srcs['is_audio'] = False
+            audio_srcs.append({'src': f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}''', 'type': ext})
     return audio_srcs
 
 
@@ -116,7 +111,6 @@ class WordForm(forms.Form):
                         if 'meta' in response_str:
                             # if " " not in searched_word:
                             result['valid'] += get_valid(response, 'stems')
-
                             result['types'].append(next(find_key(response, 'fl')))
                             result['ipas'].append(f"/{next(find_key(response, 'ipa'))}/")
                             result['audio_srcs'] += get_audio(response)
@@ -140,5 +134,6 @@ class WordForm(forms.Form):
                         result['gram'] = each['gram']
                         result['meanings'] = [each['meaning']]
                         result['usage'] = each['usage']
+                        break
             result['message'] = f'Showing results for "{searched_word}"'
         return result
