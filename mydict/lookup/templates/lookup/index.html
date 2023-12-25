@@ -78,7 +78,7 @@
               if ('exact_word' in result) {
                 phrasesList.push(`<li>${result['exact_word']}</li>`)
               }
-              result['phrases'].forEach(function(phrase) {
+              result['valid'].forEach(function(phrase) {
                 phrasesList.push(`<li>${phrase}</li>`)
               });
               var phrasesListStr = phrasesList.join('');
@@ -130,8 +130,11 @@
                 if (item == 'gram') {
                   $('#type').text(result[item])
                 }
-                if (item == 'ipa') {
-                  $('#ipa').text(result[item])
+                if (item == 'ipas') {
+                  $('#ipa').empty()
+                  result[item].forEach(function(ipa) {
+                    $('#ipa').append(ipa)
+                  })
                 };
                 if (item == 'meanings' ) {
                   $('#definition h5').text('Definitions:');

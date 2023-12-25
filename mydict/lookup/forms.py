@@ -14,9 +14,37 @@ def find_key(json_input, key):
             yield from find_key(item, key)
 
 
-def get_meanings(json, key):
+def get_valid(json, key):
+    valid_list = []
+    stems = next(find_key(json, key))
+    for phrase in stems:
+        valid_list.append(phrase.casefold())
+    return valid_list
+
+
+def get_audio(json):
+    audio = next(find_key(json, 'audio'))
+    audio_srcs = {}
+    if audio:
+        subdirectory = audio[0]
+        prefixes = ['bix', 'gg', *tuple(list('0123456789'))]
+        for prefix in prefixes:
+            if audio.startswith(prefix, 0):
+                subdirectory = prefix
+        formats = ['mp3', 'wav', 'ogg']
+        for ext in formats:
+            audio_srcs[
+                'src'] = f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}'''
+            audio_srcs['type'] = ext
+            audio_srcs['is_audio'] = True
+    else:
+        audio_srcs['is_audio'] = False
+    return audio_srcs
+
+
+def get_meanings(json, key=''):
     meanings = []
-    if isinstance(json, str):
+    if type(json) is str:
         meanings_list = [json]
     else:
         meanings_list = next(find_key(json, key))
@@ -43,6 +71,20 @@ def get_meanings(json, key):
     return meanings
 
 
+def get_collocations(json):
+    collocations_list = []
+    dros_object = next(find_key(json, 'dros'), [])
+    for dro in dros_object:
+        collo_object = {}
+        collo_object['exact_word'] = dro['drp']
+        collo_object['gram'] = next(find_key(dro, 'gram'), 'collocation')
+        meaning_str = f"{next(find_key(dro, 'dt'))[0][1]}"
+        collo_object['meaning'] = get_meanings(meaning_str)
+        collo_object['usage'] = next(find_key(dro, 'pva'), collo_object['meaning'])
+        collocations_list.append(collo_object)
+    return collocations_list
+
+
 class WordForm(forms.Form):
     word = forms.CharField(label='Your word', max_length=50)
 
@@ -53,6 +95,16 @@ class WordForm(forms.Form):
         searched_word = searched_word.strip()
         searched_word = searched_word.casefold()
         word_list = searched_word.split()
+        result['valid'] = []
+        result['exact_word'] = []
+        result['types'] = []
+        result['ipas'] = []
+        result['audio_srcs'] = []
+        result['meanings'] = []
+        result['collocations'] = []
+        result['message'] = ''
+        if '' in searched_word:
+            result['is_collocations'] = True
         for each in word_list:
             if each.isalpha():
                 api_url = f'''https://www.dictionaryapi.com/api/v3/references/learners/json/{each}?key={api_key}'''
@@ -62,60 +114,31 @@ class WordForm(forms.Form):
                     response_str = str(response)
                     if response:
                         if 'meta' in response_str:
-                            if " " not in searched_word:
-                                stems = next(find_key(response, 'stems'))
-                                result['phrases'] = []
-                                for phrase in stems:
-                                    result['phrases'].append(phrase.casefold())
-                                if searched_word in result['phrases']:
-                                    for phrase in result['phrases']:
-                                        if phrase == searched_word:
-                                            result['exact_word'] = phrase
-                                result['type'] = next(find_key(response, 'fl'))
-                                result['ipa'] = f"/{next(find_key(response, 'ipa'))}/"
-                                audio = next(find_key(response, 'audio'))
-                                if audio:
-                                    subdirectory = audio[0]
-                                    result['has_audio'] = True
-                                    prefixes = ['bix', 'gg', *tuple(list('0123456789'))]
-                                    for prefix in prefixes:
-                                        if audio.startswith(prefix, 0):
-                                            subdirectory = prefix
-                                    formats = ['mp3', 'wav', 'ogg']
-                                    audio_srcs = []
-                                    for ext in formats:
-                                        audio_srcs.append({
-                                            'src': f'''https://media.merriam-webster.com/audio/prons/en/us/mp3/{subdirectory}/{audio}.{ext}''',
-                                            'type': ext})
-                                    result['audio_srcs'] = audio_srcs
-                                result['meanings'] = get_meanings(response, 'def')
-                                result['message'] = f'Showing results for "{searched_word}"'
-                                break
-                            else:
-                                dros_object = next(find_key(response, 'dros'))
-                                dros_object_str = str(dros_object)
-                                if searched_word in dros_object_str:
-                                    phrase_object = {}
-                                    for dro in dros_object:
-                                        if dro['drp'] == searched_word:
-                                            phrase_object = dro
-                                            result['exact_word'] = dro['drp']
-                                            break
-                                    result['gram'] = next(find_key(phrase_object, 'gram'),
-                                                          'collocation')
-                                    result['meanings'] = get_meanings(next(find_key(phrase_object, 'dt'))[0][1], '')
-                                    result['usage'] = next(find_key(phrase_object, 'pva'),
-                                                           result['meanings'])
-                                    break
-                                else:
-                                    continue
+                            # if " " not in searched_word:
+                            result['valid'] += get_valid(response, 'stems')
+
+                            result['types'].append(next(find_key(response, 'fl')))
+                            result['ipas'].append(f"/{next(find_key(response, 'ipa'))}/")
+                            result['audio_srcs'] += get_audio(response)
+                            result['meanings'] += get_meanings(response, 'def')
+                            result['collocations'] += get_collocations(response)
                         else:
-                            result['message'] = f'Do you mean one of these phrases:'
-                            result['phrases'] = response
+                            result['message'] = f'Do you mean one of these valid:'
+                            result['valid'].append(*tuple(response))
                     else:
                         result['message'] = f'No results for "{searched_word}"'
                 else:
                     result['message'] = 'Server not working'
             else:
                 result['message'] = 'Invalid typing'
+        if not result['message']:
+            if searched_word in result['valid']:
+                result['exact_word'].append(searched_word)
+            if result['is_collocations']:
+                for each in result['collocations']:
+                    if each['exact_word'] == searched_word:
+                        result['gram'] = each['gram']
+                        result['meanings'] = [each['meaning']]
+                        result['usage'] = each['usage']
+            result['message'] = f'Showing results for "{searched_word}"'
         return result
