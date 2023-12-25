@@ -16,20 +16,23 @@ def find_key(json_input, key):
 
 def get_meanings(json, key):
     meanings = []
-    if isinstance(json, dict):
-        meanings_list = next(find_key(json, key))
-    else:
+    if isinstance(json, str):
         meanings_list = [json]
+    else:
+        meanings_list = next(find_key(json, key))
     if isinstance(meanings_list, list):
         for i, meaning in enumerate(meanings_list):
             if isinstance(meaning, str):
-                meaning = meaning.replace('{bc}', '')
                 meaning = meaning.replace('{b}', '<strong>')
                 meaning = meaning.replace('{/b}', '</strong>')
                 meaning = meaning.replace('{inf}', '<sub>')
                 meaning = meaning.replace('{/inf}', '</sub>')
                 meaning = meaning.replace('{it}', '<i>')
                 meaning = meaning.replace('{/it}', '</i>')
+                meaning = meaning.replace('{ldquo}', '"')
+                meaning = meaning.replace('{rdquo}', '"')
+                meaning = meaning.replace('{', '<')
+                meaning = meaning.replace('}', '>')
                 meaning = meaning.strip()
                 meanings_list[i] = meaning.capitalize()
             else:
@@ -49,8 +52,8 @@ class WordForm(forms.Form):
         searched_word = self.cleaned_data['word']
         searched_word = searched_word.strip()
         searched_word = searched_word.casefold()
-        word_set = searched_word.split()
-        for each in word_set:
+        word_list = searched_word.split()
+        for each in word_list:
             if each.isalpha():
                 api_url = f'''https://www.dictionaryapi.com/api/v3/references/learners/json/{each}?key={api_key}'''
                 response = requests.get(api_url)
@@ -60,7 +63,6 @@ class WordForm(forms.Form):
                     if response:
                         if 'meta' in response_str:
                             if " " not in searched_word:
-                                # if 'meta' in response_str:
                                 stems = next(find_key(response, 'stems'))
                                 result['phrases'] = []
                                 for phrase in stems:
@@ -101,7 +103,6 @@ class WordForm(forms.Form):
                                             break
                                     result['gram'] = next(find_key(phrase_object, 'gram'),
                                                           'collocation')
-                                    # result['meanings'] = next(find_key(phrase_object, 'dt'))[0][1]
                                     result['meanings'] = get_meanings(next(find_key(phrase_object, 'dt'))[0][1], '')
                                     result['usage'] = next(find_key(phrase_object, 'pva'),
                                                            result['meanings'])
