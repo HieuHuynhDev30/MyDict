@@ -50,12 +50,16 @@ def get_meanings(json, key=''):
                 meaning = meaning.replace('{/b}', '</strong>')
                 meaning = meaning.replace('{inf}', '<sub>')
                 meaning = meaning.replace('{/inf}', '</sub>')
-                meaning = meaning.replace('{it}', '<i>')
+                meaning = meaning.replace('{it}', '<i class="text-warning">')
                 meaning = meaning.replace('{/it}', '</i>')
                 meaning = meaning.replace('{ldquo}', '"')
                 meaning = meaning.replace('{rdquo}', '"')
                 meaning = meaning.replace('{', '<')
                 meaning = meaning.replace('}', '>')
+                if 'dxt' in meaning:
+                    meaning_split = meaning.split('|')
+                    meaning = meaning_split[1].split(':')[0]
+                    meaning = f'see <i>{meaning}</i>'
                 meaning = meaning.strip()
                 meanings_list[i] = meaning.capitalize()
             else:
@@ -129,11 +133,11 @@ class WordForm(forms.Form):
             if searched_word in result['valid']:
                 result['exact_word'].append(searched_word)
             if result['is_collocations']:
+                result['meanings'].clear()
                 for each in result['collocations']:
-                    if each['exact_word'] == searched_word:
+                    if searched_word in each['exact_word']:
                         result['gram'] = each['gram']
-                        result['meanings'] = [each['meaning']]
+                        result['meanings'] += each['meaning']
                         result['usage'] = each['usage']
-                        break
             result['message'] = f'Showing results for "{searched_word}"'
         return result

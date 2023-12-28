@@ -65,24 +65,27 @@
           
         })
         if (typing == '') {
-          $('#suggest').empty()
+          $('#suggest').hide()
         } else {
           $('#suggest').html('<div class="loading"><span></span><span></span><span></span><span></span><span></span></div>')
+          var searchedWords = $(this).val()
           $.ajax({
             type: 'POST',
             url: "{% url 'lookup:lookup' %}",
-            data: { "word": $(this).val() },
+            data: { "word": searchedWords },
             success: function(response) {
               var result = response['result'];
-              var phrasesList = [];
-              if ('exact_word' in result) {
-                phrasesList.push(`<li>${result['exact_word']}</li>`)
-              }
+              var phrasesList = [];         
               result['valid'].forEach(function(phrase) {
-                phrasesList.push(`<li>${phrase}</li>`)
-              });
-              var phrasesListStr = phrasesList.join('');
-              $('#suggest').html(phrasesList);
+                if (phrase.startsWith(searchedWords)) {
+                  phrasesList.push(`<li>${phrase}</li>`)
+                }
+              })
+              if (phrasesList != []) {
+                console.log(phrasesList)
+                var phrasesListStr = phrasesList.join('');
+                $('#suggest').html(phrasesList);
+              }
             }
           })
         }
@@ -157,12 +160,13 @@
                     }
                   })
                     $('#play').html('<button class="comic-button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-music-note" viewBox="0 0 16 16"><path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2"/><path fill-rule="evenodd" d="M9 3v10H8V3z"/><path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z"/></svg></button>')
-                    for (let i = 0; i < audio_list.length - 1; i++) {
+                    for (let i = 0; i < audio_list.length; i++) {
                       audio_list[i].onended = function() {
                         var j = i + 1
                         audio_list[j].play()
                       }
-                    } 
+                    }
+                    
                     
                     $('#play button').click(function(){
                       audio_list[0].play()
