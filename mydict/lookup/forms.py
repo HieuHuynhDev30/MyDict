@@ -23,7 +23,7 @@ def get_valid(json, key):
 
 
 def get_audio(json):
-    audio = next(find_key(json, 'audio'))
+    audio = next(find_key(json, 'audio'), 'undefined audio')
     audio_srcs = []
     if audio:
         subdirectory = audio[0]
@@ -102,8 +102,12 @@ class WordForm(forms.Form):
         result['meanings'] = []
         result['collocations'] = []
         result['message'] = ''
-        if '' in searched_word:
-            result['is_collocations'] = True
+        result['success'] = False
+        result['is_collocations'] = False
+        # if ' ' in searched_word:
+        #     result['is_collocations'] = True
+        # else:
+        #     result['is_collocations'] = False
         for each in word_list:
             if each.isalpha():
                 api_url = f'''https://www.dictionaryapi.com/api/v3/references/learners/json/{each}?key={api_key}'''
@@ -115,21 +119,35 @@ class WordForm(forms.Form):
                         if 'meta' in response_str:
                             # if " " not in searched_word:
                             result['valid'] += get_valid(response, 'stems')
-                            result['types'].append(next(find_key(response, 'fl')))
-                            result['ipas'].append(f"/{next(find_key(response, 'ipa'))}/")
+                            result['types'].append(next(find_key(response, 'fl'), 'unknown type'))
+                            result['ipas'].append(f"/{next(find_key(response, 'ipa'), 'undefined ipa')}/")
                             result['audio_srcs'] += get_audio(response)
                             result['meanings'] += get_meanings(response, 'def')
                             result['collocations'] += get_collocations(response)
+                            for each in result['collocations']:
+                                if each['exact_word'] == searched_word:
+                                    result['is_collocations'] = True
+                                    break
                         else:
-                            result['message'] = f'Do you mean one of these valid:'
-                            result['valid'].append(*tuple(response))
+                            result['message'] = f'Do you mean one of these phrases:'
+                            result['success'] = True
+                            for each in response:
+                                result['valid'].append(each)
+                            return result
                     else:
                         result['message'] = f'No results for "{searched_word}"'
+                        return result
                 else:
                     result['message'] = 'Server not working'
+                    return result
             else:
                 result['message'] = 'Invalid typing'
+                return result
+        if searched_word not in result['collocations'] and searched_word not in result['valid']:
+            result['message'] = f'No results for "{searched_word}"'
+            return result
         if not result['message']:
+            result['success'] = True
             if searched_word in result['valid']:
                 result['exact_word'].append(searched_word)
             if result['is_collocations']:
@@ -140,4 +158,4 @@ class WordForm(forms.Form):
                         result['meanings'] += each['meaning']
                         result['usage'] = each['usage']
             result['message'] = f'Showing results for "{searched_word}"'
-        return result
+            return result

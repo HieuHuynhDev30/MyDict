@@ -22,18 +22,17 @@
           <div id="spelling" class="d-flex justify-content-start align-items-baseline gap-1">
             <h2 id="exact_word" class="text-primary"></h2>
             <h5 id='type' class="text-info fst-italic"></h5>
-            <h5 id="ipa"></h5>
+            <h5 id="ipas"></h5>
             <audio id='audio'></audio>
             <div id='play'>
             </div>
           </div>
           <div id="hr"></div>
-          <div id="definition">
+          <div id="meanings">
             <h5 class='text-success'></h5>
             <ul class="text-secondary"></ul>
           </div>
           <div id="phrases">
-            <h5 class='text-success'></h5>
             <ul class="text-secondary"></ul>
           </div>
         </div>
@@ -108,71 +107,72 @@
             $('#word-form').trigger('reset');
             $('#message').empty();
             var result = response['result'];
+            $('#message').text(result['message']);
             var history = response['history'];
-            console.log(history)
             if (result['success']) {
-              if ('exact_word' in result) {
-                $('#results *').show();
-              } else {
-                if ($('#phrases').css('display') == 'none') {
-                  $('#phrases').css('display', 'block');
-                  $('#phrases ul').css('display', 'block');
-                }
-                $('#results div :not(#phrases ul)').hide();
-              }
-              for (let item in result) {
-                if (item == 'message') {
-                  $('#message').text(result[item]);
-                };
-                if (item == 'exact_word') {
-                  $('#exact_word').text(result[item])
-                };
-                if (item == 'type') {
-                  $('#type').text(result[item])
-                }
-                if (item == 'gram') {
-                  $('#type').text(result[item])
-                }
-                if (item == 'ipas') {
-                  $('#ipa').empty()
-                  result[item].forEach(function(ipa) {
-                    $('#ipa').append(ipa)
-                  })
-                };
-                if (item == 'meanings' ) {
-                  $('#definition h5').text('Definitions:');
-                    var meaningList = [];
-                    result[item].forEach(function(meaning) {
-                      meaningList.push(`<li>${meaning}</li>`)
-                    });
-                    var meaningListStr = meaningList.join('')
-                    $('#definition ul').html(meaningList);
-                };
-               
-                if (item == 'audio_srcs') {
-                  var srcs = result[item]
-                  console.log(srcs)
-                  var audio_list = []
-                  srcs.forEach(function(src) {
-                    if (src.type == 'mp3') {
-                      var audioObject = new Audio(src.src)
-                      audio_list.push(audioObject) 
-                    }
-                  })
-                    $('#play').html('<button class="comic-button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-music-note" viewBox="0 0 16 16"><path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2"/><path fill-rule="evenodd" d="M9 3v10H8V3z"/><path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z"/></svg></button>')
-                    for (let i = 0; i < audio_list.length; i++) {
-                      audio_list[i].onended = function() {
-                        var j = i + 1
-                        audio_list[j].play()
-                      }
-                    }
-                    
-                    
-                    $('#play button').click(function(){
-                      audio_list[0].play()
+              if (result['exact_word'].length != 0) {
+                $('#phrases').hide()
+                $('#results *').show()
+                $('#phrases ul').empty()
+                for (let item in result) {
+                  if (item == 'exact_word') {
+                    $('#exact_word').text(result[item])
+                  };
+                  if (item == 'types') {
+                    $('#type').text(result[item])
+                  }
+                  if (item == 'gram') {
+                    $('#type').text(result[item])
+                  }
+                  if (item == 'ipas') {
+                    $('#ipas').empty()
+                    result[item].forEach(function(ipa) {
+                      $('#ipas').append(ipa)
                     })
-                  }}
-                };
+                  };
+                  if (item == 'meanings' ) {
+                    $('#meanings h5').text('Definitions:');
+                      var meaningList = [];
+                      result[item].forEach(function(meaning) {
+                        meaningList.push(`<li>${meaning}</li>`)
+                      });
+                      var meaningListStr = meaningList.join('')
+                      $('#meanings ul').html(meaningList);
+                  };
+                 
+                  if (item == 'audio_srcs') {
+                    var srcs = result[item]
+                    console.log(srcs)
+                    var audio_list = []
+                    srcs.forEach(function(src) {
+                      if (src.type == 'mp3') {
+                        var audioObject = new Audio(src.src)
+                        audio_list.push(audioObject) 
+                      }
+                    })
+                      $('#play').html('<button class="comic-button"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-music-note" viewBox="0 0 16 16"><path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2"/><path fill-rule="evenodd" d="M9 3v10H8V3z"/><path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z"/></svg></button>')
+                      for (let i = 0; i < audio_list.length; i++) {
+                        audio_list[i].onended = function() {
+                          var j = i + 1
+                          audio_list[j].play()
+                        }
+                      }
+                      $('#play button').click(function(){
+                        audio_list[0].play()
+                      })
+                    }}
+              } else {
+                $('#phrases').show();
+                $('#phrases ul').show();
+                $('#results div :not(#phrases ul)').hide();
+                result['valid'].forEach(function(phrase) {
+                  $('#phrases ul').append(`<li>${phrase}</li>`)
+                  })
+              }
+              
+                } else {
+                  $('#results *').hide();
+                } 
                  $.each(history, function(index,word) {
                   $('#history ul').append(`<li>${history[index].fields.word}</li>`)
                  })
@@ -190,7 +190,7 @@
         e.preventDefault();
         lookUp();
       })
-      $('#suggest, #history ul').click(function(event){
+      $('#suggest, #history ul, #phrases ul').click(function(event){
         var select = event.target.innerText
         $('#look_up').val(select)
         $('#lookup-button').click()
