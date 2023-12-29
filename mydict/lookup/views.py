@@ -23,8 +23,7 @@ def lookup(request):
             added_instances = Word.objects.filter(word=word)
             added_instances_list = list(added_instances)
             search_result = form.search()
-            search_result['success'] = True
-            if not added_instances_list and 'csrfmiddlewaretoken' in request.POST and 'exact_word' in search_result:
+            if not added_instances_list and 'csrfmiddlewaretoken' in request.POST and search_result['success'] == True:
                 instance_word = Word(word=word)
                 instance_word.save()
         return JsonResponse({'result': search_result, 'history': latest_word_object, })
